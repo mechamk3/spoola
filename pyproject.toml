@@ -1,0 +1,20 @@
+[project]
+name = "spoola"
+version = "0.1.0"
+description = "Self-hosted music radio"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["mutagen>=1.47"]
+
+[project.scripts]
+spoola = "spoola.cli:main"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+spoola = ["player.html"]

@@ -1,7 +1,11 @@
-#ingestor/... folderes:
-ingestor/.venv
-ingestor/artwork
-ingestor/src/__pycache__
-
-#ingestor/...fedredr3 files:
-ingestor/library.db
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+data/
+spoola.toml
+*.db
+*.db-wal
+*.db-shm

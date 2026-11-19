@@ -1,0 +1,11 @@
+[Unit]
+Description=Spoola music station
+After=network.target
+
+[Service]
+# Change this to the spoola command inside your virtual environment.
+ExecStart=/path/to/spoola/.venv/bin/spoola serve
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
