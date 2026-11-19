@@ -29,7 +29,7 @@ spoola serve →  one station, one page
 devices on the same network
 ```
 
-The page shows the current track, its cover, and the song that comes next. That next song is loaded before the current one ends, so the station moves on without waiting. Play joins at the live position. Pause stops only that device. The station keeps the clock, and the next press of Play catches up. A phone's lock screen shows the same title, artist, and cover.
+The page shows the current track, its cover, and the song that comes next. That next song is loaded before the current one ends, so the station moves on without waiting. Play fetches the station and joins at the live position. Stop leaves this device: the audio, the track, and the timeline clear, and the page stops asking the server for anything until the next Play. The station keeps the clock for everyone else. A phone's lock screen shows the same title, artist, and cover.
 
 ## Setup
 

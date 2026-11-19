@@ -77,6 +77,19 @@ function showNext(upcoming) {
   upnext.hidden = false;
 }
 
+function showIdle() {
+  title.textContent = "";
+  artist.textContent = "";
+  album.textContent = "";
+  document.title = "Spoola";
+  showCover({ artwork: null, title: "", album: "" });
+  showNext(null);
+  paint(0, 0);
+  latest = null;
+  trackId = null;
+  publishSession(null, false);
+}
+
 function render(now) {
   const track = now.track;
   if (!track) {
@@ -160,6 +173,7 @@ async function playElement(element) {
 function clearPlayer(element) {
   element.pause();
   element.muted = false;
+  element.src = "";
   element.removeAttribute("src");
   delete element.dataset.id;
   delete element.dataset.primed;
@@ -200,8 +214,10 @@ async function attach(now) {
       active.dataset.id = track.id;
       active.load();
       await waitForMetadata(active);
+      if (!listening) return;
       if (catchUp) {
         await whenDuration(active);
+        if (!listening) return;
         seekTo(active, now.position);
       } else {
         owedPosition = null;
@@ -211,9 +227,11 @@ async function attach(now) {
   } else if (catchUp) {
     seekTo(active, now.position);
   }
+  if (!listening) return;
   catchUp = false;
   if (active.paused) {
     const started = await playElement(active);
+    if (!listening) return;
     if (!started) stopListening("Press play to listen.");
   }
 }
@@ -270,7 +288,9 @@ function beginIncoming() {
   const release = () => {
     if (outgoing !== active) outgoing.pause();
   };
-  if (pending) pending.then(release).catch(() => stopListening("Press play to listen."));
+      if (pending) pending.then(release).catch(() => {
+        if (listening) stopListening("Press play to listen.");
+      });
   else release();
   setTimeout(() => {
     if (outgoing !== active) clearPlayer(outgoing);
@@ -333,7 +353,7 @@ async function refresh() {
     if (token === requestId) message.textContent = "The station is not responding.";
     return;
   }
-  if (token !== requestId || waitingForStation(now)) return;
+  if (token !== requestId || !listening || waitingForStation(now)) return;
   latest = now;
   render(now);
   if (!listening || !now.track) return;
@@ -341,27 +361,42 @@ async function refresh() {
     await enqueueAttach(now);
     considerWarm(now);
   } catch (error) {
-    message.textContent = "This file could not be played.";
+    if (listening) message.textContent = "This file could not be played.";
   }
+}
+
+let pollTimer = 0;
+
+function startPolling() {
+  stopPolling();
+  pollTimer = setInterval(refresh, 4000);
+}
+
+function stopPolling() {
+  if (!pollTimer) return;
+  clearInterval(pollTimer);
+  pollTimer = 0;
 }
 
 function stopListening(note) {
   owedPosition = null;
   listening = false;
+  requestId += 1;
+  stopPolling();
   document.body.classList.remove("listening");
-  active.pause();
-  clearWarm();
+  players.forEach(clearPlayer);
+  showIdle();
   button.textContent = "Play";
-  if (note) message.textContent = note;
-  if (latest && latest.track) publishSession(latest.track, false);
+  message.textContent = note || "";
 }
 
 async function startListening() {
   catchUp = true;
   listening = true;
   document.body.classList.add("listening");
-  button.textContent = "Pause";
+  button.textContent = "Stop";
   message.textContent = "";
+  startPolling();
   await refresh();
 }
 
@@ -425,5 +460,4 @@ if ("mediaSession" in navigator) {
   }
 }
 
-refresh();
-setInterval(refresh, 4000);
+showIdle();
