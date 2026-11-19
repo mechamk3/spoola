@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spoola</title>
+  <link rel="stylesheet" href="/player.css">
+</head>
+<body>
+  <main class="station">
+    <header>
+      <span>Spoola</span>
+      <span class="live"><span class="dot"></span> Live</span>
+    </header>
+    <div class="sleeve">
+      <img id="cover" alt="" hidden>
+      <div id="placeholder" class="placeholder"></div>
+    </div>
+    <h1 id="title">Loading…</h1>
+    <p id="artist" class="artist"></p>
+    <p id="album" class="album"></p>
+    <p id="upnext" class="upnext" hidden><span class="label">Next</span> <span id="upnext-name"></span></p>
+    <div class="meter" aria-hidden="true"><div id="bar"></div></div>
+    <div class="times">
+      <span id="elapsed">0:00</span>
+      <span id="total">0:00</span>
+    </div>
+    <button id="play" type="button">Play</button>
+    <p id="message" role="status"></p>
+  </main>
+  <audio id="audio-a" preload="none"></audio>
+  <audio id="audio-b" preload="none"></audio>
+  <script src="/player.js"></script>
+</body>
+</html>

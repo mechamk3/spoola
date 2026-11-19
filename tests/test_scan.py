@@ -6,9 +6,9 @@ from tempfile import TemporaryDirectory
 from mutagen.id3 import APIC, TALB, TDRC, TIT2, TPE1, TPE2, TCON
 from mutagen.mp3 import MP3
 
-from spoola.cli import main
-from spoola.extract import parse_year
-from spoola.scan import scan
+from scan.extract import parse_year
+from scan.walk import scan
+from serve.cli import main
 
 # 1x1 PNG. The scanner stores the bytes; it does not decode them.
 PNG = bytes.fromhex(

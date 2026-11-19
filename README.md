@@ -29,7 +29,7 @@ spoola serve →  one station, one page
 devices on the same network
 ```
 
-The page shows the current track and its cover. Play joins the station at the live position. Pause stops only that device. The station keeps the clock, and the next press of Play catches up. A song that ends is followed by the next one in the shuffle.
+The page shows the current track, its cover, and the song that comes next. That next song is loaded before the current one ends, so the station moves on without waiting. Play joins at the live position. Pause stops only that device. The station keeps the clock, and the next press of Play catches up. A phone's lock screen shows the same title, artist, and cover.
 
 ## Setup
 
@@ -112,6 +112,8 @@ loginctl enable-linger "$USER"
 The user service reads your config file and can see a music folder in your home directory. Linger keeps the station running after you log out.
 
 ## Development
+
+The source is three folders. `scan` reads tags and writes the catalog. `serve` is the station and the `spoola` command. `web` is the page: `index.html`, `player.css`, and `player.js`. The server reads those files on each request, so reload the browser to see a design change. A restart is only needed when the Python changes.
 
 ```bash
 python3 -m venv .venv

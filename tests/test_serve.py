@@ -10,10 +10,10 @@ from tempfile import TemporaryDirectory
 
 from test_scan import PNG, write_mp3
 
-from spoola.cli import main
-from spoola.scan import scan
-from spoola.serve import make_server, parse_range
-from spoola.station import Station
+from scan.walk import scan
+from serve.cli import main
+from serve.http import make_server, parse_range
+from serve.station import Station
 
 
 class Clock:
@@ -54,6 +54,26 @@ class StationTests(unittest.TestCase):
             self.assertNotEqual(nxt.track.id, opening.track.id)
             self.assertAlmostEqual(nxt.position, 0.4)
 
+    def test_next_song_is_known_before_this_one_ends(self) -> None:
+        with TemporaryDirectory() as raw:
+            data = self._catalog(Path(raw), [("First", 10), ("Second", 5), ("Third", 8)])
+            clock = Clock()
+            station = Station(data, clock=clock, rng=random.Random(0))
+            opening = station.on_air()
+            assert opening is not None and opening.upcoming is not None
+            self.assertNotEqual(opening.upcoming.id, opening.track.id)
+            clock.now = 1
+            again = station.on_air()
+            assert again is not None and again.upcoming is not None
+            self.assertEqual(again.track.id, opening.track.id)
+            self.assertEqual(again.upcoming.id, opening.upcoming.id)
+
+            clock.now = opening.track.duration + 0.2
+            following = station.on_air()
+            assert following is not None and following.upcoming is not None
+            self.assertEqual(following.track.id, opening.upcoming.id)
+            self.assertNotEqual(following.upcoming.id, following.track.id)
+
     def test_one_track_starts_again(self) -> None:
         with TemporaryDirectory() as raw:
             data = self._catalog(Path(raw), [("Only", 10)])
@@ -66,6 +86,8 @@ class StationTests(unittest.TestCase):
             assert again is not None
             self.assertEqual(again.track.id, opening.track.id)
             self.assertAlmostEqual(again.position, 5)
+            assert opening.upcoming is not None
+            self.assertEqual(opening.upcoming.id, opening.track.id)
 
     def test_zero_duration_is_skipped(self) -> None:
         with TemporaryDirectory() as raw:
@@ -94,7 +116,7 @@ class StationTests(unittest.TestCase):
             assert on_air is not None
             located = station.track(on_air.track.id)
             assert located is not None
-            from spoola.station import resolve_inside
+            from serve.station import resolve_inside
 
             self.assertIsNone(resolve_inside(located[1], located[0].path))
 
@@ -151,13 +173,22 @@ class ServerTests(unittest.TestCase):
 
             page = fetch(server, "/")
             self.assertEqual(page.status, 200)
-            self.assertIn(b"Spoola", page.read())
+            self.assertIn(b"/player.css", page.read())
+            sheet = fetch(server, "/player.css")
+            self.assertEqual(sheet.status, 200)
+            self.assertIn("text/css", sheet.headers["Content-Type"])
+            script = fetch(server, "/player.js")
+            self.assertEqual(script.status, 200)
+            self.assertIn(b"startListening", script.read())
 
             first = json.load(fetch(server, "/now"))
             second = json.load(fetch(server, "/now"))
             self.assertEqual(first["track"]["title"], "Hello")
             self.assertEqual(first["track"]["artist"], "Band")
             self.assertEqual(first["track"]["id"], second["track"]["id"])
+            self.assertEqual(first["next"]["id"], first["track"]["id"])
+            self.assertEqual(first["next"]["title"], "Hello")
+            self.assertEqual(first["next"]["artworkType"], "image/png")
             self.assertIsNotNone(first["track"]["artwork"])
 
             artwork = fetch(server, first["track"]["artwork"])

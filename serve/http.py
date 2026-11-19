@@ -6,9 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-from spoola.station import OnAir, Station, resolve_inside
-
-PLAYER_HTML = Path(__file__).with_name("player.html").read_bytes()
+from serve.station import OnAir, Station, resolve_inside
 
 AUDIO_TYPES = {
     ".mp3": "audio/mpeg",
@@ -24,6 +22,24 @@ AUDIO_TYPES = {
 }
 
 _ID = set("0123456789abcdefABCDEF-")
+
+WEB_TYPES = {
+    ".html": "text/html; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".woff2": "font/woff2",
+}
+
+
+def web_root() -> Path:
+    """Page files beside this checkout, or the copy bundled with an install."""
+    source = Path(__file__).resolve().parents[1] / "web"
+    if (source / "index.html").is_file():
+        return source
+    return Path(__file__).resolve().parent / "web"
 
 
 class Server(ThreadingHTTPServer):
@@ -51,9 +67,6 @@ def handler_for(station: Station) -> type[BaseHTTPRequestHandler]:
 
 def dispatch(handler: BaseHTTPRequestHandler, station: Station, *, head: bool) -> None:
     path = urlparse(handler.path).path
-    if path == "/":
-        send_bytes(handler, 200, PLAYER_HTML, "text/html; charset=utf-8", head=head)
-        return
     if path == "/now":
         body = json.dumps(now_payload(station.on_air()), ensure_ascii=False).encode()
         send_bytes(handler, 200, body, "application/json; charset=utf-8", head=head, cache="no-store")
@@ -66,24 +79,44 @@ def dispatch(handler: BaseHTTPRequestHandler, station: Station, *, head: bool) -
         artwork_id = path.removeprefix("/artworks/")
         send_artwork(handler, station, artwork_id, head=head)
         return
+    if send_web(handler, path, head=head):
+        return
     send_bytes(handler, 404, b"Not found\n", "text/plain; charset=utf-8", head=head)
+
+
+def send_web(handler: BaseHTTPRequestHandler, url_path: str, *, head: bool) -> bool:
+    relative = "index.html" if url_path == "/" else url_path.lstrip("/")
+    path = resolve_inside(web_root(), relative)
+    if path is None:
+        return False
+    mime = WEB_TYPES.get(path.suffix.lower())
+    if mime is None:
+        return False
+    send_file(handler, path, mime, head=head)
+    return True
 
 
 def now_payload(on_air: OnAir | None) -> dict:
     if on_air is None:
-        return {"track": None, "position": 0}
-    track = on_air.track
+        return {"track": None, "next": None, "position": 0}
     return {
         "position": round(on_air.position, 2),
-        "track": {
-            "id": track.id,
-            "title": track.display_title,
-            "artist": track.artist,
-            "album": track.album,
-            "duration": track.duration,
-            "audio": f"/tracks/{track.id}/audio",
-            "artwork": f"/artworks/{track.artwork_id}" if track.artwork_id else None,
-        },
+        "track": _track_payload(on_air.track),
+        "next": _track_payload(on_air.upcoming) if on_air.upcoming is not None else None,
+    }
+
+
+def _track_payload(track) -> dict:
+    artwork = f"/artworks/{track.artwork_id}" if track.artwork_id else None
+    return {
+        "id": track.id,
+        "title": track.display_title,
+        "artist": track.artist,
+        "album": track.album,
+        "duration": track.duration,
+        "audio": f"/tracks/{track.id}/audio",
+        "artwork": artwork,
+        "artworkType": track.artwork_mime if artwork else None,
     }
 
 

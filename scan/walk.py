@@ -11,8 +11,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
-from spoola.catalog import Catalog
-from spoola.extract import AUDIO_EXTENSIONS, extract_track
+from scan.catalog import Catalog
+from scan.extract import AUDIO_EXTENSIONS, extract_track
 
 
 @dataclass(frozen=True)

@@ -4,7 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from spoola.config import (
+from serve.config import (
     Config,
     ConfigError,
     default_config_path,
@@ -13,9 +13,9 @@ from spoola.config import (
     locate,
     save,
 )
-from spoola.scan import Summary, scan
-from spoola.serve import listen_urls, make_server
-from spoola.station import Station
+from scan.walk import Summary, scan
+from serve.http import listen_urls, make_server
+from serve.station import Station
 
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8080

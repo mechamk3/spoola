@@ -19,6 +19,7 @@ class Track:
     album: str | None
     duration: float
     artwork_id: str | None
+    artwork_mime: str | None = None
 
     @property
     def display_title(self) -> str:
@@ -44,6 +45,7 @@ class Library:
 class OnAir:
     track: Track
     position: float
+    upcoming: Track | None = None
 
 
 class Station:
@@ -71,7 +73,7 @@ class Station:
                 return None
             track = self._library.tracks[self._order[self._index]]
             position = min(max(self._clock() - self._started, 0.0), track.duration)
-            return OnAir(track, position)
+            return OnAir(track, position, self._upcoming())
 
     def track(self, track_id: str) -> tuple[Track, Path] | None:
         with self._lock:
@@ -106,6 +108,7 @@ class Station:
             self._queue(avoid=None)
             self._started = self._clock()
         self._catch_up()
+        self._ensure_upcoming()
 
     def _reload_if_needed(self) -> None:
         database = self.data_dir / "library.db"
@@ -152,6 +155,30 @@ class Station:
             self._index += 1
             return
         self._queue(avoid=finished)
+
+    def _upcoming(self) -> Track | None:
+        if not self._order:
+            return None
+        index = self._index + 1 if self._index + 1 < len(self._order) else self._index
+        return self._library.tracks.get(self._order[index])
+
+    def _ensure_upcoming(self) -> None:
+        """Keep the following song decided while the current one is still playing.
+
+        At the end of a shuffle the next cycle is chosen once and then left
+        alone, so every listener preloads the same track.
+        """
+        if not self._order or self._index + 1 < len(self._order):
+            return
+        current = self._order[self._index]
+        ids = [track.id for track in self._library.tracks.values() if track.duration > 0]
+        if len(ids) <= 1:
+            return
+        self._rng.shuffle(ids)
+        if ids[0] == current:
+            ids.append(ids.pop(0))
+        self._order = [current, *ids]
+        self._index = 0
 
     def _queue(self, avoid: str | None) -> None:
         ids = [track.id for track in self._library.tracks.values() if track.duration > 0]
@@ -216,6 +243,7 @@ def read_library(database: Path) -> Library:
             album=row["album"],
             duration=float(row["duration"]),
             artwork_id=artwork_id,
+            artwork_mime=row["artwork_mime"] if artwork_id else None,
         )
     return Library(root, tracks, artworks)
 

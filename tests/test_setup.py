@@ -5,8 +5,8 @@ from tempfile import TemporaryDirectory
 
 from test_scan import write_mp3
 
-from spoola.cli import main
-from spoola.config import Config, ConfigError, default_config_path, load, locate, save
+from serve.cli import main
+from serve.config import Config, ConfigError, default_config_path, load, locate, save
 
 
 class ConfigTests(unittest.TestCase):
